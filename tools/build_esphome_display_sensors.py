@@ -24,6 +24,7 @@ def output_esphome_font():
     print('      - "\\U000F058D"  # mdi:water-off')
     print('      - "\\U000F032A"  # mdi:leaf')
     print('      - "\\U000F12D9"  # mdi:leaf-off")')
+    print()
 
 def output_esphome_sensor(plant_entity):
     print(f"# {plant_entity.state.attributes['friendly_name']}")
