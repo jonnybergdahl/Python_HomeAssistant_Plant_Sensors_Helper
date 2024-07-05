@@ -2,11 +2,6 @@ import secrets
 from homeassistant_api import Client
 from pprint import pprint
 
-#secrets = {
-#    "HA_URL": "http://ha.bergdahl.local/api",
-#    "HA_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxZjYzYjc5NmM0MmM0YjI2OTUxY2M2NjdjOTQyZjViNSIsImlhdCI6MTY4MzcxMzM4NSwiZXhwIjoxOTk5MDczMzg1fQ.UJUN1R4cyHJKRhUzpxAeqsFU3z39oeKMYj96CTUe0TU"
-#}
-
 def output_esphome_font():
     print('font:')
     print('  - file: "fonts/arial.ttf"')
