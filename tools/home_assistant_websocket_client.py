@@ -84,7 +84,7 @@ class HomeAssistantWebSocketClient:
         devices =  await self.get_plant_device_dict()
         plant_result = []
         for device in devices:
-            id = device.get("id")
+            device_id = device.get("id")
             area_id = device.get("area_id")
             if area_id in self._areas:
                 area_name = self._areas[area_id]
@@ -92,8 +92,9 @@ class HomeAssistantWebSocketClient:
                 area_name = None
             name = device["name"]
             model = device["model"]
+
             plant_result.append({
-                "device_id": id,
+                "device_id": device_id,
                 "area_id": area_id,
                 "area_name": area_name,
                 "name": name,
@@ -113,6 +114,23 @@ class HomeAssistantWebSocketClient:
         sorted_result = OrderedDict(sorted(result.items()))
         return sorted_result
 
+    async def get_entity_config(self, entity_id: str):
+        response = await self._send_message("config/entity_registry/list")
+        config = response.get("result", [])
+        match = [item for item in config if item["entity_id"] == entity_id]
+        if not match:
+            return None
+
+        return match[0]
+
+    async def get_state(self, entity_id: str):
+        response = await self._send_message("get_states")
+        states = response.get("result", [])
+        match = [item for item in states if item["entity_id"] == entity_id]
+        if not match:
+            return None
+
+        return match[0]
 
     async def get_plant_device_dict(self):
         """
@@ -136,7 +154,7 @@ class HomeAssistantWebSocketClient:
         domain_result = []
         for entity in result:
             if str(entity.get("entity_id")).startswith("plant"):
-                entity_id = entity.get("entity_id")
+                entity_id = str(entity.get("entity_id"))
                 device_id = entity.get("device_id")
                 area_id = self._plant_devices[device_id]["area_id"]
                 if area_id in self._areas:
@@ -144,6 +162,13 @@ class HomeAssistantWebSocketClient:
                 else:
                     area_name = None
                 name = entity["name"]
+                # Now get name of underlying sensor
+                moisture_entity = entity_id.replace("plant.", "sensor.") + "_soil_moisture"
+                # Extract external_sensor
+                state = await self.get_state(moisture_entity)
+                external_sensor = state
+                crap = await self.get_entity_config(moisture_entity)
+
                 if name is None:
                     name = entity.get("original_name")
                 domain_result.append({
@@ -152,6 +177,7 @@ class HomeAssistantWebSocketClient:
                     "area_id": area_id,
                     "area_name": area_name,
                     "name": name,
+                    "moisture_entity": moisture_entity,
                 })
         return domain_result
 
@@ -164,6 +190,54 @@ class HomeAssistantWebSocketClient:
             if str(entity.get("entity_id")).startswith("plant"):
                 domain_result.append(entity)
         return domain_result
+
+    async def entity_exists(self, entity_id: str) -> bool:
+        """
+        Check if an entity exists in Home Assistant.
+        
+        Args:
+            entity_id: The entity ID to check
+            
+        Returns:
+            bool: True if entity exists, False otherwise
+        """
+        response = await self._send_message("get_states")
+        states = response.get("result", [])
+        return any(item["entity_id"] == entity_id for item in states)
+
+    async def entity_attr_exists(self, entity_id: str, attr: str) -> bool:
+        """
+        Check if an attribute exists for an entity in Home Assistant.
+        
+        Args:
+            entity_id: The entity ID to check
+            attr: The attribute name to check
+            
+        Returns:
+            bool: True if attribute exists, False otherwise
+        """
+        state = await self.get_state(entity_id)
+        if not state:
+            return False
+
+        return attr in state.get("attributes", {})
+
+    async def get_state_attr(self, entity_id: str, attr: str):
+        """
+        Get a specific attribute from an entity's state.
+    
+        Args:
+            entity_id: The entity ID to get the attribute from
+            attr: The name of the attribute to retrieve
+    
+        Returns:
+            The attribute value if found, None otherwise
+        """
+        state = await self.get_state(entity_id)
+        if not state:
+            return None
+
+        return state.get("attributes", {}).get(attr)
 
     async def call_service(self, domain, service, service_data):
         """

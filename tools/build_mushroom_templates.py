@@ -4,6 +4,8 @@ from typing import List, Dict, Any
 import my_secrets
 from home_assistant_websocket_client import HomeAssistantWebSocketClient
 
+client = HomeAssistantWebSocketClient(my_secrets.HA_HOST, my_secrets.HA_PORT, my_secrets.HA_TOKEN)
+
 def output_template_header(plant_entities: List[Dict[str, Any]]) -> None:
     """
     Outputs the header for the plant entities formatted as Esphome YAML.
@@ -24,7 +26,7 @@ def output_template_header(plant_entities: List[Dict[str, Any]]) -> None:
     print(f"  - type: custom:mushroom-title-card")
     print(f"    title: {area_name}")
 
-def output_mushroom_template(plant_entity: Dict[str, Any]) -> None:
+async def output_mushroom_template(plant_entity: Dict[str, Any]) -> None:
     """
     Outputs the detailed mushroom-template-card configuration for a plant entity.
 
@@ -37,26 +39,31 @@ def output_mushroom_template(plant_entity: Dict[str, Any]) -> None:
     """
     entity_id: str = plant_entity['entity_id']
     sensor_name: str = entity_id.split('.')[1]
+    moisture_sensor_name: str = 'sensor.' + sensor_name + '_soil_moisture'      
     print( "  - type: custom:mushroom-template-card")
     print(f"    entity: {plant_entity['entity_id']}")
     print(f"    primary: {plant_entity['name']}")
     print( "    picture: \"{{ state_attr(entity, 'entity_picture') }}\"")
     print(f"    secondary: >")
 
-    # Might want to do this lookup in this code
-    print( "      {% set sensor_name = entity.split('.')[1] %}")
-    print( "      {% set sensor = state_attr('sensor." + sensor_name + "_soil_moisture', 'external_sensor') %}")
-    print( "      {% set battery = sensor.replace('moisture', 'battery') %}")
+    # Basic plant, moisture
+    print(f"      {{% set moisture = states('{moisture_sensor_name}') %}}")
+    print( "      {% set moisture_ok = state_attr(entity, 'moisture_status') %}")
+    print( "      {% if moisture_ok %} 💧{% else %} 🩸{% endif %} {{ moisture }}%")
 
-    print( "      {% if state_attr(entity, 'moisture_status') == 'ok'  %} 💧{% else %} 🩸{% endif %}")
-    print( "      {{ states('sensor." + sensor_name + "_soil_moisture', with_unit=True) }} - ")
-    print( "      {% if state_attr(entity, 'conductivity_status') == 'ok'  %} 🌿{% else %} 🌱{% endif %}")
-    print( "      {{ states('sensor." + sensor_name + "_conductivity', with_unit=True) }}")
-    print( "      {% if has_value(battery) %} - ")
-    print( "      {% if states(battery) | int > 15 %} 🔋 {% else %} 🪫 {% endif %}")
-    print( "      {{ states(battery, with_unit=True) }} {% endif %}")
+    # MiFlora sensor
+    conductivity_sensor_name: str = 'sensor.' + sensor_name + '_conductivity'
+    if await client.entity_attr_exists(conductivity_sensor_name, "external_sensor"):
+        conductivity_real_name = await client.get_state_attr(conductivity_sensor_name, 'external_sensor')
+        battery_sensor_name = conductivity_real_name.replace('conductivity', 'battery')
+        print(f"      {{% set conductivity = states('{conductivity_sensor_name}') %}}")
+        print( "      {% set conductivity_ok = state_attr(entity, 'conductivity_status') %}")
+        print(f"      {{% set battery = states('{battery_sensor_name}') %}}")
+        print( "      {% set battery_ok = (battery | int > 15) if battery is not none and battery != 'unknown' else false %}")
+        print( "      {% if conductivity_ok %} - 🌿{% else %} - 🌱{% endif %} {{ conductivity }} µS/cm")
+        print( "      {% if battery_ok %} 🔋 {% else %} 🪫 {% endif %} {{ battery }}%")
+
     print( "      ({{ relative_time(states[entity].last_updated) }})")
-
     print( "    badge_icon: |")
     print( "      {% if is_state_attr(entity, 'moisture_status', 'ok') %} mdi:water {% else %} mdi:water-alert {% endif %}")
     print( "    badge_color: |")
@@ -80,7 +87,6 @@ async def main() -> None:
     Returns:
         None
     """
-    client = HomeAssistantWebSocketClient(my_secrets.HA_HOST, my_secrets.HA_PORT, my_secrets.HA_TOKEN)
     await client.connect()
 
     # Get plants, sorted on Area
@@ -89,7 +95,7 @@ async def main() -> None:
     for key in plants.keys():
         output_template_header(plants[key])
         for plant_entity in plants[key]:
-            output_mushroom_template(plant_entity)
+            await output_mushroom_template(plant_entity)
 
 
 if __name__ == "__main__":
