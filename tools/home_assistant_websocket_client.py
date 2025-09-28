@@ -156,6 +156,7 @@ class HomeAssistantWebSocketClient:
             if str(entity.get("entity_id")).startswith("plant"):
                 entity_id = str(entity.get("entity_id"))
                 device_id = entity.get("device_id")
+                print(entity_id)
                 area_id = self._plant_devices[device_id]["area_id"]
                 if area_id in self._areas:
                     area_name = self._areas[area_id]

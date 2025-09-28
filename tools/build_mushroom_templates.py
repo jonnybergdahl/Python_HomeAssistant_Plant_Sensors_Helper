@@ -23,8 +23,6 @@ def output_template_header(plant_entities: List[Dict[str, Any]]) -> None:
     print(f"============================")
     print(f"type: vertical-stack")
     print(f"cards:")
-    print(f"  - type: custom:mushroom-title-card")
-    print(f"    title: {area_name}")
 
 async def output_mushroom_template(plant_entity: Dict[str, Any]) -> None:
     """
@@ -48,7 +46,7 @@ async def output_mushroom_template(plant_entity: Dict[str, Any]) -> None:
 
     # Basic plant, moisture
     print(f"      {{% set moisture = states('{moisture_sensor_name}') %}}")
-    print( "      {% set moisture_ok = state_attr(entity, 'moisture_status') %}")
+    print( "      {% set moisture_ok = state_attr(entity, 'moisture_status') == 'ok' %}")
     print( "      {% if moisture_ok %} 💧{% else %} 🩸{% endif %} {{ moisture }}%")
 
     # MiFlora sensor
@@ -57,7 +55,7 @@ async def output_mushroom_template(plant_entity: Dict[str, Any]) -> None:
         conductivity_real_name = await client.get_state_attr(conductivity_sensor_name, 'external_sensor')
         battery_sensor_name = conductivity_real_name.replace('conductivity', 'battery')
         print(f"      {{% set conductivity = states('{conductivity_sensor_name}') %}}")
-        print( "      {% set conductivity_ok = state_attr(entity, 'conductivity_status') %}")
+        print( "      {% set conductivity_ok = state_attr(entity, 'conductivity_status') == 'ok' %}")
         print(f"      {{% set battery = states('{battery_sensor_name}') %}}")
         print( "      {% set battery_ok = (battery | int > 15) if battery is not none and battery != 'unknown' else false %}")
         print( "      {% if conductivity_ok %} - 🌿{% else %} - 🌱{% endif %} {{ conductivity }} µS/cm")
