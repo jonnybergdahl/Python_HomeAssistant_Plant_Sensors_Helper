@@ -66,7 +66,10 @@ async def output_mushroom_template(plant_entity: Dict[str, Any]) -> None:
     print( "      {% if is_state_attr(entity, 'moisture_status', 'ok') %} mdi:water {% else %} mdi:water-alert {% endif %}")
     print( "    badge_color: |")
     print( "      {% if is_state_attr(entity, 'moisture_status', 'ok') %} green {% else %} red {% endif %}")
-
+    print( "    features_position: bottom")
+    print( "    grid_options:")
+    print( "      columns: 12")
+    print( "      rows: 1")
 
 async def main() -> None:
     """
@@ -79,9 +82,6 @@ async def main() -> None:
         2. Retrieves plant information grouped by area using `get_plants_sorted_on_area`.
         3. Outputs Esphome YAML configuration for each plant, grouped by its area.
 
-    Args:
-        None
-
     Returns:
         None
     """
@@ -91,8 +91,10 @@ async def main() -> None:
     plants = await client.get_plants_sorted_on_area()
 
     for key in plants.keys():
-        output_template_header(plants[key])
-        for plant_entity in plants[key]:
+        # Sort plants in each area alphabetically by name before output
+        sorted_plants = sorted(plants[key], key=lambda p: (p.get('name') or '').lower())
+        output_template_header(sorted_plants)
+        for plant_entity in sorted_plants:
             await output_mushroom_template(plant_entity)
 
 
