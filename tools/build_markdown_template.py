@@ -76,7 +76,7 @@ def main() -> None:
     print("      {% endif %}")      # if conductivity
     print("      {% if miflora_sensor %}")
     print("         {% set battery_sensor = miflora_sensor.replace('_conductivity', '_battery') %}")
-    print("  <td style=\"padding: 8px; border: 1px solid;\">{{ '✅' if states(battery_sensor) | int > 10 else '❌' }} {{ states(battery_sensor) }}%</td>")
+    print("  <td style=\"padding: 8px; border: 1px solid;\">{{ '✅' if states(battery_sensor) | int(default=0) > 10 else '❌' }} {{ states(battery_sensor) }}%</td>")
     print("        {% else %}")
     print("  <td></td>")
     print("        {% endif %}")    # if mi_flora

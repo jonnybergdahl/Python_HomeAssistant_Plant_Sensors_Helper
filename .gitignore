@@ -161,4 +161,5 @@ cython_debug/
 
 my_secrets.py
 
-.idea
+.idea/
+*.html
