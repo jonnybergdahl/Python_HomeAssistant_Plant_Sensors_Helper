@@ -162,7 +162,13 @@ class HomeAssistantWebSocketClient:
                     area_name = self._areas[area_id]
                 else:
                     area_name = None
-                name = entity["name"]
+                name = entity.get("name")
+                if name is None or name == "":
+                    name = entity.get("original_name")
+                if name is None or name == "":
+                    # Fallback to device name
+                    if device_id in self._plant_devices:
+                        name = self._plant_devices[device_id].get("name")
                 # Now get name of underlying sensor
                 moisture_entity = entity_id.replace("plant.", "sensor.") + "_soil_moisture"
                 # Extract external_sensor
@@ -170,8 +176,6 @@ class HomeAssistantWebSocketClient:
                 external_sensor = state
                 crap = await self.get_entity_config(moisture_entity)
 
-                if name is None:
-                    name = entity.get("original_name")
                 domain_result.append({
                     "entity_id": entity_id,
                     "device_id": device_id,
